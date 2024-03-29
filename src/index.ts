@@ -1,24 +1,38 @@
-import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { ApolloServer } from 'apollo-server-express';
+import express from "express";
+import { ApolloServer } from "@apollo/server";
+import { expressMiddleware } from "@apollo/server/express4";
 
-import { typeDefs } from '../schema/schema';
+async function init() {
+  const app = express();
+  const PORT = process.env.PORT || 4000;
 
-const app = express();
-const prisma = new PrismaClient();
+  app.use(express.json());
 
-const server = new ApolloServer({
-  typeDefs,
-  context: {
-    prisma,
-  },
-});
+  // create GraphQL server
+  const gqlServer = new ApolloServer({
+    typeDefs: `type Query { hello: String }`,
+    resolvers: {
+      Query: {
+        hello: () => "Hello World!",
+      },
+    },
+  });
 
-server.applyMiddleware({ app });
+  // Start the server
+  await gqlServer.start();
 
-app.listen({ port: 4000 }, () =>
-  console.log(`🚀 Server ready at http://localhost:4000${server.graphqlPath}`)
-);
+  app.get("/", (req, res) => {
+    res.send(`
+      <h1>GraphQL Server</h1>
+      <p>Go to <a href="/api/graphql">/api/graphql</a> to access the GraphQL server</p>
+    `);
+  });
 
+  app.use("/api/graphql", expressMiddleware(gqlServer));
 
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT} 🚀`);
+  });
+}
 
+init();
